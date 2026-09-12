@@ -2,6 +2,493 @@ Here's a complete guide to setting up and using **GoNB** on Ubuntu Linux with VS
 
 ---
 
+Yes. I checked your setup notes. They are specifically for **Go + GoNB + Jupyter \+ VS Code on Ubuntu**.  GitHub
+
+ The cleanest setup is:
+
+ **Ubuntu → Go → GoNB → Jupyter kernel → VS Code Jupyter extension → `.ipynb`**
+
+ ## 1\. Install Go
+
+```
+sudo apt update
+sudo apt install -y golang-go
+
+go version
+```
+
+ If you already have Go, skip this.
+
+ ## 2\. Install Python + Jupyter
+
+ I'd recommend using a virtual environment rather than installing Jupyter globally:
+
+```
+sudo apt install -y python3 python3-pip python3-venv
+```
+
+ Create a Jupyter environment:
+
+```
+python3 -m venv ~/jupyter-venv
+source ~/jupyter-venv/bin/activate
+```
+
+ Then:
+
+```
+pip install --upgrade pip
+pip install jupyterlab notebook
+```
+
+ Verify:
+
+```
+jupyter --version
+```
+
+ ## 3\. Install GoNB
+
+ GoNB is what allows a Jupyter notebook to execute Go code.
+
+```
+go install github.com/janpfeifer/gonb@latest
+go install golang.org/x/tools/cmd/goimports@latest
+go install golang.org/x/tools/gopls@latest
+```
+
+ Your binaries will normally be in:
+
+```
+~/go/bin
+```
+
+ Add that to your PATH:
+
+```
+echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
+source ~/.bashrc
+```
+
+ Check:
+
+```
+which gonb
+which goimports
+which gopls
+```
+
+ You should get paths similar to:
+
+```
+/home/your-user/go/bin/gonb
+/home/your-user/go/bin/goimports
+/home/your-user/go/bin/gopls
+```
+
+ ## 4\. Register Go as a Jupyter kernel
+
+ This is the important step:
+
+```
+gonb --install
+```
+
+ Check that Jupyter sees it:
+
+```
+jupyter kernelspec list
+```
+
+ You should see something containing:
+
+```
+gonb
+```
+
+ Your notes also use `gonb --install` to register the kernel.  GitHub
+
+ ## 5\. Install VS Code extensions
+
+ In VS Code:
+
+ **Ctrl + Shift + X**
+
+ Install:
+
+ - **Python** — Microsoft
+- **Jupyter** — Microsoft
+
+ The Python and Jupyter extensions work together for `.ipynb` notebooks in VS Code.  Visual Studio Code+1
+
+ You don't need to install a separate "Go Jupyter" VS Code extension.
+
+ ## 6\. Open/create a notebook
+
+ Create something like:
+
+```
+mkdir -p ~/go-notebooks
+cd ~/go-notebooks
+code .
+```
+
+ In VS Code:
+
+ **Ctrl + Shift + P → `Create: New Jupyter Notebook`**
+
+ Or create:
+
+```
+test.ipynb
+```
+
+ ## 7\. Select the GoNB kernel
+
+ Open `test.ipynb`.
+
+ At the **top-right**, click:
+
+```
+Select Kernel
+```
+
+ Then:
+
+```
+Select Another Kernel...
+    ↓
+Jupyter Kernels
+    ↓
+Go (gonb)
+```
+
+ VS Code's current notebook UI uses the kernel picker in the upper-right.  Visual Studio Code
+
+ ## 8\. Test Go
+
+ Put this in a notebook cell:
+
+```
+import "fmt"
+
+%%
+fmt.Println("Hello from Go + Jupyter!")
+```
+
+ Run the cell.
+
+ You should get:
+
+```
+Hello from Go + Jupyter!
+```
+
+ The `%%` is GoNB-specific; it allows the cell to be executed as the body of a `func main()`.  GitHub
+
+---
+
+ # Important Ubuntu + VS Code PATH issue
+
+ This is the annoying part from your notes.
+
+ You may have:
+
+```
+which goimports
+```
+
+ working perfectly in your terminal, but GoNB inside VS Code may complain:
+
+```
+goimports: command not found
+```
+
+ Even though:
+
+```
+~/go/bin/goimports
+```
+
+ exists.
+
+ If that happens, first try the simpler solution: **fully restart VS Code** after adding `~/go/bin` to your PATH.
+
+ If it still doesn't work, your notes suggest exposing the Go binaries through `/usr/local/bin`:
+
+```
+sudo ln -s $(go env GOPATH)/bin/goimports /usr/local/bin/goimports
+sudo ln -s $(go env GOPATH)/bin/gopls /usr/local/bin/gopls
+sudo ln -s $(go env GOPATH)/bin/gonb /usr/local/bin/gonb
+```
+
+ Then:
+
+```
+which goimports
+```
+
+ should show:
+
+```
+/usr/local/bin/goimports
+```
+
+ Restart the VS Code Jupyter kernel afterward. Your notes specifically identify this as a common GoNB/VS Code PATH issue.  GitHub
+
+ ## 9\. The setup in one shot
+
+ If you're starting from a relatively clean Ubuntu installation, this is essentially what you need:
+
+```
+sudo apt update
+sudo apt install -y golang-go python3 python3-pip python3-venv
+
+python3 -m venv ~/jupyter-venv
+source ~/jupyter-venv/bin/activate
+
+pip install --upgrade pip
+pip install jupyterlab notebook
+
+go install github.com/janpfeifer/gonb@latest
+go install golang.org/x/tools/cmd/goimports@latest
+go install golang.org/x/tools/gopls@latest
+
+echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
+source ~/.bashrc
+
+gonb --install
+
+jupyter kernelspec list
+```
+
+ Then open VS Code, install **Python + Jupyter**, open `.ipynb`, and select:
+
+```
+Select Kernel
+ → Jupyter Kernels
+ → Go (gonb)
+```
+
+ That's all you need for **Go notebooks in VS Code on Ubuntu**. VS Code officially supports Jupyter notebooks through its Jupyter extension and lets you select installed kernels from the notebook kernel picker.  Visual Studio Code+1
+
+ One caveat from your notes: **GoNB's `gopls`-powered completion/contextual help works better in JupyterLab than VS Code**, so if your primary goal is DSA practice with Go notebooks, VS Code is fine for execution/editing, but JupyterLab may give you a better Go notebook experience.  GitHub
+
+ Yes — that points to a **VS Code environment/PATH issue**, not a GoNB installation issue.
+
+ Since the same notebook works in the browser, your GoNB kernel is basically fine. VS Code's Jupyter process simply can't find `goimports`.
+
+ ### 1\. First check from the VS Code terminal
+
+ In VS Code, open **Terminal → New Terminal** and run:
+
+```
+which go
+which goimports
+go env GOPATH
+ls "$(go env GOPATH)/bin/goimports"
+```
+
+ If the last command shows something like:
+
+```
+/home/yourname/go/bin/goimports
+```
+
+ but:
+
+```
+which goimports
+```
+
+ returns nothing, fix your PATH.
+
+ ### 2. Add Go's bin directory to PATH
+
+ Run:
+
+```
+echo 'export PATH="$PATH:$(go env GOPATH)/bin"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+ Then verify:
+
+```
+which goimports
+goimports -h
+```
+
+ You should see:
+
+```
+/home/yourname/go/bin/goimports
+```
+
+ ### 3\. Restart VS Code completely
+
+ This is important.
+
+ Close **all VS Code windows**, then start VS Code again:
+
+```
+code .
+```
+
+ Then reopen your `.ipynb` and restart the kernel.
+
+---
+
+ ### 4\. If it still says `goimports` isn't installed
+
+ Install it explicitly:
+
+```
+go install golang.org/x/tools/cmd/goimports@latest
+```
+
+ Then:
+
+```
+ls "$(go env GOPATH)/bin/goimports"
+```
+
+ If it exists but VS Code still cannot see it, make it available system-wide:
+
+```
+sudo ln -sf "$(go env GOPATH)/bin/goimports" /usr/local/bin/goimports
+```
+
+ Verify:
+
+```
+which goimports
+```
+
+ Expected:
+
+```
+/usr/local/bin/goimports
+```
+
+ Then **restart VS Code and restart the Jupyter kernel**.
+
+ ### 5\. One more thing about your code
+
+ Your code:
+
+```
+import "fmt"
+
+func main() {
+    fmt.Println("Hi")
+}
+```
+
+ is valid Go, but in a **GoNB notebook cell**, you normally don't need `main()`.
+
+ Try simply:
+
+```
+import "fmt"
+
+fmt.Println("Hi")
+```
+
+ Or, if you're using GoNB's cell syntax, the notebook can handle the surrounding execution for you.
+
+ The key issue, though, is **`goimports` not being visible to the VS Code-launched kernel**. Since browser Jupyter works, I would **not reinstall Jupyter or GoNB yet**.
+
+ If you paste the output of these four commands from the **VS Code terminal**:
+
+```
+which go
+which goimports
+go env GOPATH
+echo $PATH
+```
+
+ I can tell you exactly what's wrong.
+
+ Either is fine for **`goimports`**. Your `goimports` is installed correctly:
+
+```
+/home/iamdreamer/go/bin/goimports
+```
+
+ And this:
+
+```
+goimports -h
+```
+
+ working confirms it.
+
+ The `(govenv)` at the beginning is just your **Python virtual environment**. It does **not** mean Go is installed inside `govenv`.
+
+ ### For your current problem
+
+ You are currently here:
+
+```
+~/Documents/govenv
+```
+
+ That's completely fine. The important part is that:
+
+```
+which goimports
+```
+
+ returns:
+
+```
+/home/iamdreamer/go/bin/goimports
+```
+
+ ### Now test VS Code specifically
+
+ **Close VS Code completely**, then from the same terminal run:
+
+```
+cd ~/Documents/govenv
+code .
+```
+
+ Open your notebook and restart the kernel:
+
+ **Kernel → Restart Kernel**
+
+ Then run:
+
+```
+import "fmt"
+
+fmt.Println("Hi")
+```
+
+ If it **still** says:
+
+ > Program goimports is not installed
+
+ then the issue is that the Jupyter kernel launched by VS Code isn't inheriting your shell's PATH.
+
+ In that case, run this:
+
+```
+sudo ln -sf /home/iamdreamer/go/bin/goimports /usr/local/bin/goimports
+```
+
+ Then verify:
+
+```
+which goimports
+```
+
+ and restart VS Code again.
+
+ **You don't need to move out of `govenv`.** Your Python `govenv` and Go's `~/go/bin` are independent.
+
 ## 🐧 Step 1 — Full Ubuntu Setup
 
 ### 1. Install Go (if not already installed)
