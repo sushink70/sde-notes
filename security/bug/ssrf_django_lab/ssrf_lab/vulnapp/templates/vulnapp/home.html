@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSRF Training Lab</title>
+    <style>
+        body { font-family: monospace; background:#0d1117; color:#c9d1d9; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #58a6ff; }
+        a { color: #58a6ff; text-decoration: none; }
+        .level { border: 1px solid #30363d; padding: 15px; margin-bottom: 15px; border-radius: 6px; }
+        .badge { background:#21262d; padding:2px 8px; border-radius:4px; font-size:12px; }
+    </style>
+</head>
+<body>
+    <h1>SSRF Training Lab</h1>
+    <p>Four intentionally vulnerable endpoints, one exercise per SSRF anti-pattern. Attack them, then read views.py to see exactly why each one broke.</p>
+
+    <div class="level">
+        <span class="badge">LEVEL 1</span> <strong>Naive SSRF</strong><br>
+        <a href="/level1/stock-check/">/level1/stock-check/</a> — no validation at all.
+    </div>
+
+    <div class="level">
+        <span class="badge">LEVEL 2</span> <strong>Blacklist-based filter (bypassable)</strong><br>
+        <a href="/level2/webhook-test/">/level2/webhook-test/</a> — blocks literal "localhost"/"127.0.0.1" strings.
+    </div>
+
+    <div class="level">
+        <span class="badge">LEVEL 3</span> <strong>Whitelist-based filter (bypassable)</strong><br>
+        <a href="/level3/import-avatar/">/level3/import-avatar/</a> — naive startswith() domain check.
+    </div>
+
+    <div class="level">
+        <span class="badge">LEVEL 4</span> <strong>Blind SSRF + metadata escalation</strong><br>
+        <a href="/level4/export-report/">/level4/export-report/</a> — POST only, response never reflects fetch result.<br>
+        Requires the simulated internal service (<code>internal_service.py</code>) running on port 9000.
+    </div>
+
+    <p>See README.md for the full exploitation walkthrough for every level.</p>
+</body>
+</html>

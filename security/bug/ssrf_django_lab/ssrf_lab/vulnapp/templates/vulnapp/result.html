@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Level {{ level }} — Result</title>
+    <style>
+        body { font-family: monospace; background:#0d1117; color:#c9d1d9; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #58a6ff; }
+        pre { background:#161b22; padding:15px; border-radius:6px; white-space: pre-wrap; word-break: break-all; }
+        .meta { color:#8b949e; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <a href="/">&larr; back</a>
+    <h1>Level {{ level }} — Request Result</h1>
+    <div class="meta">Requested URL: <code>{{ requested_url }}</code></div>
+    <div class="meta">Status: <code>{{ status }}</code></div>
+    <pre>{{ body }}</pre>
+</body>
+</html>

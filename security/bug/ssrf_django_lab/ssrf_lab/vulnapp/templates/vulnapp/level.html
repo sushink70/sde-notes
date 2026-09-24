@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body { font-family: monospace; background:#0d1117; color:#c9d1d9; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #58a6ff; }
+        code { background:#161b22; padding:2px 6px; border-radius:4px; }
+        .hint { border-left: 3px solid #58a6ff; padding-left: 12px; margin-top: 20px; color:#8b949e; }
+    </style>
+</head>
+<body>
+    <a href="/">&larr; back</a>
+    <h1>{{ title }}</h1>
+    <p>{{ description }}</p>
+    <div class="hint">
+        Try: <code>{{ request.path }}{{ param_hint }}</code>
+    </div>
+</body>
+</html>

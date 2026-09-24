@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Level {{ level }} — Blocked</title>
+    <style>
+        body { font-family: monospace; background:#0d1117; color:#c9d1d9; max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #f85149; }
+        pre { background:#161b22; padding:15px; border-radius:6px; white-space: pre-wrap; word-break: break-all; }
+    </style>
+</head>
+<body>
+    <a href="/">&larr; back</a>
+    <h1>403 — Blocked by filter</h1>
+    <p>{{ reason }}</p>
+    <pre>{{ requested_url }}</pre>
+</body>
+</html>
