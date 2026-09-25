@@ -909,3 +909,241 @@ Call Level │ Input │ Calculation      │ Returns
      3     │   2   │ 2 * factorial(1) │    2
      4     │   1   │ 1 * factorial(0) │    1
      5     │   0   │ Base case        │    1
+
+
+# Types of Recursion — with Recursion Trees (Go & Rust)
+
+## 1. Linear Recursion
+Each call makes **exactly one** recursive call. The call stack forms a straight line, not a branching tree.
+
+**Example: Factorial**
+
+```go
+func factorial(n int) int {
+    if n == 0 {
+        return 1
+    }
+    return n * factorial(n-1) // single recursive call
+}
+```
+
+```rust
+fn factorial(n: u64) -> u64 {
+    if n == 0 {
+        1
+    } else {
+        n * factorial(n - 1) // single recursive call
+    }
+}
+```
+
+**Recursion "tree" (really a chain) for `factorial(4)`:**
+```
+factorial(4)
+  └─ factorial(3)
+       └─ factorial(2)
+            └─ factorial(1)
+                 └─ factorial(0) → returns 1
+            ← 1*1 = 1
+       ← 2*1 = 2
+  ← 3*2 = 6
+← 4*6 = 24
+```
+**Complexity:** O(n) time, O(n) stack space (depth = n).
+
+---
+
+## 2. Binary Recursion
+Each call makes **two** recursive calls. This creates a true branching tree — and often redundant work if not memoized.
+
+**Example: Naive Fibonacci**
+
+```go
+func fib(n int) int {
+    if n <= 1 {
+        return n
+    }
+    return fib(n-1) + fib(n-2) // two recursive calls
+}
+```
+
+```rust
+fn fib(n: u64) -> u64 {
+    if n <= 1 {
+        n
+    } else {
+        fib(n - 1) + fib(n - 2) // two recursive calls
+    }
+}
+```
+
+**Recursion tree for `fib(5)`:**
+```
+                        fib(5)
+                      /        \
+                 fib(4)          fib(3)
+                /      \        /      \
+           fib(3)     fib(2) fib(2)   fib(1)
+          /     \     /   \   /   \
+     fib(2)  fib(1) fib(1)fib(0)fib(1)fib(0)
+     /   \
+  fib(1) fib(0)
+```
+Notice `fib(3)`, `fib(2)`, etc. get **recomputed** many times — this is why naive binary recursion is O(2ⁿ). (Memoization / DP collapses this tree into a line, giving O(n).)
+
+**Complexity:** O(2ⁿ) time, O(n) space (max stack depth, since only one branch is "live" at a time).
+
+---
+
+## 3. Multiple Recursion
+Each call makes **more than two** recursive calls. Common in combinatorics, grid/graph traversal, and divide-and-conquer over multiple partitions.
+
+**Example: Counting ways to climb stairs taking 1, 2, or 3 steps**
+
+```go
+func countWays(n int) int {
+    if n < 0 {
+        return 0
+    }
+    if n == 0 {
+        return 1
+    }
+    return countWays(n-1) + countWays(n-2) + countWays(n-3) // 3 calls
+}
+```
+
+```rust
+fn count_ways(n: i32) -> i32 {
+    if n < 0 {
+        return 0;
+    }
+    if n == 0 {
+        return 1;
+    }
+    count_ways(n - 1) + count_ways(n - 2) + count_ways(n - 3) // 3 calls
+}
+```
+
+**Recursion tree for `countWays(4)`** (each node branches into 3):
+```
+                     countWays(4)
+              /            |            \
+       countWays(3)  countWays(2)  countWays(1)
+       /   |   \        /   \           |
+   cw(2) cw(1) cw(0) cw(1) cw(0)      cw(0)
+   / | \   |          |
+ cw1 cw0 cw-1 cw0   cw0
+ ...
+```
+**Complexity:** O(3ⁿ) time in the naive form — grows even faster than binary recursion since branching factor is 3.
+
+---
+
+## 4. Mutual Recursion
+Two or more functions call **each other**, rather than calling themselves directly.
+
+**Example: `isEven` / `isOdd`**
+
+```go
+func isEven(n int) bool {
+    if n == 0 {
+        return true
+    }
+    return isOdd(n - 1)
+}
+
+func isOdd(n int) bool {
+    if n == 0 {
+        return false
+    }
+    return isEven(n - 1)
+}
+```
+
+```rust
+fn is_even(n: u32) -> bool {
+    if n == 0 {
+        true
+    } else {
+        is_odd(n - 1)
+    }
+}
+
+fn is_odd(n: u32) -> bool {
+    if n == 0 {
+        false
+    } else {
+        is_even(n - 1)
+    }
+}
+```
+
+**"Tree" (alternating chain) for `isEven(4)`:**
+```
+isEven(4)
+  └─ isOdd(3)
+       └─ isEven(2)
+            └─ isOdd(1)
+                 └─ isEven(0) → true
+```
+Note the function name **flips at each level** — that's the signature of mutual recursion. It's still linear in shape (one call per level), just alternating identity.
+
+**Complexity:** O(n) time, O(n) space.
+
+---
+
+## 5. Tail Recursion
+The recursive call is the **very last action** — nothing happens after it returns (no pending multiplication, addition, etc.). This allows compilers/runtimes that support **Tail Call Optimization (TCO)** to reuse the current stack frame instead of pushing a new one.
+
+**Example: Tail-recursive factorial (using an accumulator)**
+
+```go
+// Note: Go does NOT perform TCO, so this still uses O(n) stack frames,
+// but it demonstrates the tail-recursive *pattern*.
+func factorialTail(n int, acc int) int {
+    if n == 0 {
+        return acc
+    }
+    return factorialTail(n-1, n*acc) // last operation, nothing after it
+}
+```
+
+```rust
+// Rust also does not guarantee TCO (LLVM may optimize it in release
+// builds, but it's not language-guaranteed), but the pattern is idiomatic.
+fn factorial_tail(n: u64, acc: u64) -> u64 {
+    if n == 0 {
+        acc
+    } else {
+        factorial_tail(n - 1, n * acc) // last operation, nothing after it
+    }
+}
+```
+
+**Recursion tree/chain for `factorialTail(4, 1)`:**
+```
+factorialTail(4, 1)
+  └─ factorialTail(3, 4)
+       └─ factorialTail(2, 12)
+            └─ factorialTail(1, 24)
+                 └─ factorialTail(0, 24) → returns 24 directly
+```
+Compare this to plain `factorial`: there, each frame waits for its child to return, then multiplies (`n * factorial(n-1)`) — that multiplication *after* the call is what makes it **non-tail** recursive. Here, the multiplication happens **before** the call, packed into the accumulator, so the call is the last thing that happens.
+
+**Complexity:** O(n) time. With true TCO, O(1) stack space; without it (as in Go/Rust by default), still O(n) space.
+
+---
+
+## Quick Comparison Table
+
+| Type | # recursive calls | Shape | Example | Time (naive) |
+|---|---|---|---|---|
+| Linear | 1 | chain | factorial | O(n) |
+| Binary | 2 | binary tree | fibonacci | O(2ⁿ) |
+| Multiple | >2 | k-ary tree | stair-climbing (k steps) | O(kⁿ) |
+| Mutual | 1, alternating functions | chain, alternating labels | isEven/isOdd | O(n) |
+| Tail | 1, as last op | chain, but stack-reusable | factorial w/ accumulator | O(n), O(1) space with TCO |
+
+A practical note since you're doing DSA in Go/Rust: **neither language guarantees TCO** (unlike Scheme/Erlang), so for deep recursion (large n) on real inputs, prefer converting tail-recursive solutions into iterative loops to avoid stack overflow — the accumulator pattern above translates directly into a `for` loop.
+
+Want me to go through converting one of these (e.g., binary recursion → memoized DP, or tail recursion → iterative loop) with the code side by side?

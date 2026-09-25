@@ -1894,3 +1894,855 @@ You had the **right intuition** — recursive exploration of buy points. Your im
 Now implement this version, then compare it to the state machine version. Feel the difference. Both are tools in your arsenal.
 
 **You're building depth. Keep going.** 🔥
+
+# 22. Generate Parentheses
+
+**Problem:** Given `n` pairs of parentheses, generate all combinations of well-formed parentheses.
+
+**Approach:** Backtracking. Track the count of open and close parentheses used so far:
+- Add `(` if we haven't used all `n` open parens yet
+- Add `)` only if it wouldn't exceed the number of open parens used (i.e., `close < open`)
+- A valid combination is complete when its length is `2n`
+
+```python
+def generateParenthesis(n: int) -> list[str]:
+    result = []
+
+    def backtrack(current: list[str], open_count: int, close_count: int) -> None:
+        if len(current) == 2 * n:
+            result.append("".join(current))
+            return
+
+        if open_count < n:
+            current.append("(")
+            backtrack(current, open_count + 1, close_count)
+            current.pop()
+
+        if close_count < open_count:
+            current.append(")")
+            backtrack(current, open_count, close_count + 1)
+            current.pop()
+
+    backtrack([], 0, 0)
+    return result
+```
+
+**Example:** `n = 3` →
+```
+["((()))", "(()())", "(())()", "()(())", "()()()"]
+```
+
+**Complexity:**
+- Time: O(4ⁿ / √n) — bounded by the nth Catalan number, since only valid sequences are built (no pruning waste)
+- Space: O(4ⁿ / √n) for the output, plus O(n) recursion depth
+
+**Why it works:** The two guard conditions (`open_count < n` and `close_count < open_count`) ensure we never place a `)` without a matching unmatched `(` before it, and never exceed `n` total `(`. This guarantees every generated string is valid — no need to check validity after the fact.
+
+Want me to also show the iterative/BFS version, or walk through the recursion tree for a small `n`?
+
+Good question — this is the part that trips almost everyone up at first. Let me give you a general recipe, then map it onto this problem.
+
+## 1. How to figure out the parameters
+
+Ask: **"What information do I need to know, at any point in the middle of building a solution, to decide what to do next?"**
+
+That's your parameter list. Concretely, break it into two kinds:
+
+- **State needed to make decisions** (what choices are still legal right now)
+- **State needed to build the final answer** (the partial result so far)
+
+For Generate Parentheses:
+- To decide "can I place `(`?" → I need to know how many `(` I've placed → `open_count`
+- To decide "can I place `)`?" → I need to know how many `)` I've placed (compared to `open_count`) → `close_count`
+- To build the answer → I need the string built so far → `current`
+
+That's it. `n` itself is fixed for the whole recursion, so it's a parameter too, but conceptually it's "config," not "changing state."
+
+A useful test: **if you deleted a parameter, could you still make every decision correctly?** If not, it's necessary. If yes, drop it. (E.g., you *could* derive `close_count` from `len(current) - open_count`, so technically it's redundant here — I kept it for clarity, but it shows the parameters aren't always minimal, just sufficient.)
+
+## 2. How to derive the base case
+
+Ask: **"What does a *finished* solution look like, structurally?"** — not "what's correct," just "what's *complete*."
+
+Here, a finished attempt is any string of length `2n` (whether valid or not, in principle — but our guards prevent invalid ones from ever reaching this length). So:
+
+```python
+if len(current) == 2 * n:
+```
+
+The base case is almost always a direct translation of "I have built something of the target size/shape" — e.g., "reached the last index," "used all elements," "filled all positions."
+
+## 3. When does the function return?
+
+There are two distinct kinds of "stopping":
+
+**(a) The base case — a natural stop.** You've completed one full candidate. Record it, then `return` (there's nothing more to try from here).
+
+**(b) Falling off the end of the function — the implicit stop.** After you've tried every legal choice at this position (both the `(` branch and the `)` branch here), there's nothing left to do, so the function just ends and control goes back to the caller. This is what actually drives backtracking — it's *not* a special case, it's just "ran out of options at this level."
+
+The `current.pop()` after each recursive call is the actual "backtrack" step: it undoes the choice so the next branch starts from a clean state.
+
+## The shape, stripped to its skeleton
+
+```python
+def backtrack(state...):
+    if <state describes a complete solution>:
+        record it
+        return
+
+    for each legal choice from here:
+        make the choice   (mutate state / append)
+        backtrack(new state)
+        undo the choice   (unmutate / pop)
+```
+
+Every backtracking problem is this skeleton. The *work* is entirely in:
+1. What counts as "state" (→ your parameters)
+2. What counts as "complete" (→ your base case)
+3. What counts as "legal choice" (→ your `if` guards before recursing)
+
+If you want, I can walk through the actual call stack for `n = 2` step-by-step (showing exactly when it pushes, pops, and backtracks) — that visual often makes it click.
+
+## The Generic Backtracking Template
+
+```python
+def backtrack(path, choices_state):
+    # 1. BASE CASE — is this a complete solution?
+    if is_solution(path, choices_state):
+        result.append(path[:])   # save a COPY
+        return
+
+    # 2. Try every option available at this point
+    for choice in get_options(path, choices_state):
+
+        # 3. Skip illegal/invalid choices
+        if not is_valid(choice, path, choices_state):
+            continue
+
+        # 4. CHOOSE — make the move
+        path.append(choice)
+        update(choices_state, choice)
+
+        # 5. EXPLORE — recurse deeper
+        backtrack(path, choices_state)
+
+        # 6. UN-CHOOSE — undo the move (the actual "backtrack")
+        path.pop()
+        undo(choices_state, choice)
+```
+
+That's the whole idea. Every backtracking problem is: **choose → explore → un-choose**, wrapped in a loop, with a stopping condition at the top.
+
+### Why the "un-choose" step is the heart of it
+
+Recursion alone lets you go *forward* through choices. Backtracking is what lets you go back and try a *different* choice at the same level, using the *same* `path` variable instead of copying it everywhere. You mutate it going down, then un-mutate it coming back up — like using one whiteboard for every branch instead of a fresh sheet each time.
+
+```
+choose A → recurse → (explore everything under A) → un-choose A
+choose B → recurse → (explore everything under B) → un-choose B
+choose C → recurse → (explore everything under C) → un-choose C
+```
+
+At every level, by the time you try B, the whiteboard looks exactly like it did before you tried A. That's only true because you erased (`pop`/`undo`) what A wrote.
+
+## Mapping it onto Generate Parentheses
+
+| Template piece | This problem |
+|---|---|
+| `path` | `current` (list of chars) |
+| `choices_state` | `open_count`, `close_count` |
+| `is_solution` | `len(current) == 2*n` |
+| `get_options` | `["(", ")"]` |
+| `is_valid` | `(` allowed if `open_count < n`; `)` allowed if `close_count < open_count` |
+| choose / un-choose | `current.append(x)` / `current.pop()` |
+
+```python
+def backtrack(current, open_count, close_count):
+    if len(current) == 2 * n:                       # base case
+        result.append("".join(current))
+        return
+
+    if open_count < n:                               # valid choice #1
+        current.append("(")                           # choose
+        backtrack(current, open_count + 1, close_count)  # explore
+        current.pop()                                  # un-choose
+
+    if close_count < open_count:                     # valid choice #2
+        current.append(")")
+        backtrack(current, open_count, close_count + 1)
+        current.pop()
+```
+
+Here the validity check is baked into `if` guards *before* recursing (instead of a `continue` inside a loop), because there are only ever two possible choices, not a variable list.
+
+## A second example, to see the pattern repeat — Subsets
+
+```python
+def backtrack(start, path):
+    result.append(path[:])              # every path is a valid "solution"
+
+    for i in range(start, len(nums)):
+        path.append(nums[i])             # choose
+        backtrack(i + 1, path)           # explore (only look forward)
+        path.pop()                       # un-choose
+```
+
+Notice: no `is_valid` check needed here (every subset is legal), and the base case is almost trivial (every call is a valid subset) — the recording happens **every call**, not just at the "end." This is the variant to watch for: **sometimes there's no single bottom-of-the-tree base case — every node in the recursion tree is itself a valid answer.**
+
+## The three questions to ask for any new problem
+
+1. **What do I need to remember to know my legal next moves?** → your parameters (`open_count`/`close_count`, or `start` index, or a `used[]` array, etc.)
+2. **What does "I'm done, record this" look like?** → your base case (`len == 2n`, or `i == len(nums)`, or `path` sums to target, etc.)
+3. **What are the candidate next choices, and which are actually legal right now?** → your loop + `is_valid` filter
+
+Once those three are pinned down, the choose/explore/un-choose skeleton is always the same code shape.
+
+That boiling feeling is almost always because you're trying to hold the *whole tree* in your head at once. You don't need to — and here's the key mental shift:
+
+## The big misconception to drop
+
+**The function calls are NOT independent and NOT building the answer separately.** There is only **one shared `path`** (or `current` list) the whole time. Every call just adds one thing to it, hands it deeper, and removes that one thing when it's done. Think of it as **one whiteboard**, not many notebooks.
+
+```
+current = []          ← this ONE list is passed around and mutated the whole time
+```
+
+No call ever "independently" forms an answer. Each call contributes exactly **one character**, then trusts deeper calls to fill in the rest, then erases its contribution before returning.
+
+## Let's trace n = 2 completely, by hand
+
+I'll write `backtrack(open, close)` and show `current` at each moment. Indent = depth of recursion.
+
+```
+call: backtrack(0,0)   current=[]
+  open<2 → append "("  current=["("]
+  call: backtrack(1,0)   current=["("]
+    open<2 → append "("  current=["(","("]
+    call: backtrack(2,0)   current=["(","("]
+      open<2? NO (open==n)
+      close<open? YES → append ")"  current=["(","(",")"]
+      call: backtrack(2,1)   current=["(","(",")"]
+        open<2? NO
+        close<open? YES → append ")"  current=["(","(",")",")"]
+        call: backtrack(2,2)   current=["(","(",")",")"]
+          len==4! → RECORD "(())"   ← ANSWER #1
+          return
+        pop()  current=["(","(",")"]        ← ERASE the ")"
+      return
+      pop()  current=["(","("]              ← ERASE the ")"
+    return
+    pop()  current=["("]                     ← ERASE the second "("
+  
+  close<open? YES → append ")"  current=["(",")"]
+  call: backtrack(1,1)   current=["(",")"]
+    open<2 → append "("  current=["(",")","("]
+    call: backtrack(2,1)   current=["(",")","("]
+      close<open → append ")"  current=["(",")","(",")"]
+      call: backtrack(2,2)   current=["(",")","(",")"]
+        len==4! → RECORD "()()"   ← ANSWER #2
+        return
+      pop()  current=["(",")","("]
+    return
+    pop()  current=["(",")"]
+    close<open? close==1, open==1 → NO (1<1 false)
+  return
+  pop()  current=["("]
+  
+return
+pop()  current=[]
+```
+
+Final result: `["(())", "()()"]` — correct for n=2.
+
+## What to actually watch, to stop your brain from boiling
+
+Don't try to hold the whole tree. Just watch **one single variable, `current`,** over time, and notice:
+
+- It only ever **grows by one at a time** going down (`append`)
+- It only ever **shrinks by one at a time** coming back up (`pop`)
+- **The instant it hits length 4, whatever it currently holds gets copied into `result`, then we retreat**
+
+That's genuinely the whole mechanism. The "tree" is just a visualization of the *order* in which `append`/`pop` happen — it's not a separate structure being built.
+
+## The one-sentence mental model
+
+> `current` is a shared, mutable "current guess" that grows deeper into a choice and shrinks back out — like a single hiking trail marker that gets planted going downhill and picked back up on the way back, so the next fork can try a different path with a clean trail.
+
+If you trace just that — one variable, append/pop, and "record when full" — instead of trying to picture every branch simultaneously, it should stop feeling overwhelming. Want to try tracing n=3 yourself and I'll check it?
+
+Here's the full recursion tree for `n = 3`. Every **edge going down** is a `push` (append), every **edge going back up** is a `pop`, and every **leaf** is a moment where `len(current) == 6` fires and we record the answer.
+
+```
+""
+└─ "("
+   ├─ "(("
+   │  ├─ "((("
+   │  │  └─ "((()"
+   │  │     └─ "((())"
+   │  │        └─ "((()))"   ✓ RESULT 1
+   │  │
+   │  └─ "(()"
+   │     ├─ "(()("
+   │     │  └─ "(()()"
+   │     │     └─ "(()())"   ✓ RESULT 2
+   │     │
+   │     └─ "(())"
+   │        └─ "(())("
+   │           └─ "(())()"   ✓ RESULT 3
+   │
+   └─ "()"
+      └─ "()("
+         ├─ "()(("
+         │  └─ "()(()"
+         │     └─ "()(())"   ✓ RESULT 4
+         │
+         └─ "()()"
+            └─ "()()("
+               └─ "()()()"   ✓ RESULT 5
+```
+
+## How to read this
+
+- **Going down a branch** = `current.append(...)`, then `backtrack(...)` is called.
+- **Reaching a leaf** = base case hit → `result.append("".join(current))` → `return`.
+- **Coming back up** = `current.pop()` — the code literally climbs back to the parent node in this diagram, one character shorter, ready to try the *next* sibling branch.
+
+Notice the branching pattern at each node — it's always governed by the two `if` guards:
+
+- `"((("` (o=3,c=0) → `open_count < n` is **false** (3 is not < 3), so **no left branch** — only one child.
+- `"(()"` (o=2,c=1) → both guards are true → **two children**: `"(()("` and `"(())"`.
+- `"()"` (o=1,c=1) → `close_count < open_count` is **false** (1 is not < 1) → **no right branch** — only one child.
+
+So the *shape* of the tree (which nodes have 1 vs 2 children, or 0) is entirely decided by those two `if` conditions — that's the "pruning" that keeps this tree small instead of trying every possible string of `(` and `)`.
+
+## The order of results is not a coincidence
+
+The 5 results are recorded **in the exact order the leaves are visited left-to-right**, because this is a classic **DFS, pre-order-ish traversal**: go as deep as possible down the *first* available branch (`(` before `)`), hit a leaf, record it, climb back up to the nearest unvisited sibling, and repeat.
+
+That's why LeetCode's expected output for `n=3` is exactly:
+```python
+["((()))", "(()())", "(())()", "()(())", "()()()"]
+```
+— it's just this tree read left to right.
+
+**The one thing to internalize:** the tree above isn't a separate data structure your code builds — it's just a *picture* of the order in which one shared `current` list grows and shrinks over time. If you print `current` right before every `append` and right after every `pop`, you'd literally be tracing this exact tree, node by node.
+
+Great question — this is actually a completely mechanical process once you know what to look for. The tree structure is a direct, 1-to-1 mirror of your code. You don't "invent" the tree — you just read it off the function.
+
+## The 4-step method (works for any backtracking problem)
+
+### Step 1: A node = "one function call" = "the current state"
+Whatever you're passing as parameters (or whatever `path`/`current` looks like at that moment) **is** the node's label. Nothing more.
+
+> Node label = snapshot of `current` (and any other state) at that call.
+
+### Step 2: The children of a node = the valid choices at that call
+Look at your `for` loop (or your `if` guards). Each **branch that doesn't get skipped** by `is_valid`/the guard becomes one child edge.
+
+> Number of children = number of choices that pass the validity check at that state.
+
+This is the step people skip — and it's the one that actually determines the *shape* of the tree. You must know your `is_valid` rule cold.
+
+### Step 3: A leaf = the base case firing
+Whenever `is_solution(...)` becomes true, that node has **no children** — draw it as a leaf, mark it ✓, and that's a recorded answer (or, in problems like Subsets, *every* node is simultaneously an answer AND still has children).
+
+### Step 4: Draw depth-first, left to right, in the same order the loop tries choices
+The very first valid choice becomes the leftmost branch. Go all the way down that branch before drawing the next sibling. This left-to-right order **is exactly the order results get appended to `result`**, which is why the tree also documents your answer order.
+
+## Do it yourself: a checklist before drawing
+
+For *any* new problem, answer these 3 questions first — you already know this from earlier, but now apply it specifically to draw the tree:
+
+1. **What does a node's label look like?** (What does `current`/`path` contain at an arbitrary point?)
+2. **From a given node, what are the candidate next choices, and which ones are actually legal?** → this fixes branching factor
+3. **What condition makes a node a leaf?** → this fixes the depth
+
+## Worked example: Subsets of `[1, 2, 3]`
+
+Code:
+```python
+def backtrack(start, path):
+    result.append(path[:])              # EVERY node is recorded — no separate "leaf-only" check
+    for i in range(start, len(nums)):
+        path.append(nums[i])
+        backtrack(i + 1, path)
+        path.pop()
+```
+
+Apply the checklist:
+1. **Node label** = current `path`, e.g. `[1,2]`
+2. **Choices from node `(start, path)`** = `nums[start:]` — i.e., only elements *after* the last one picked (this is what prevents duplicate subsets like `[1,2]` and `[2,1]`)
+3. **Leaf condition** = `start == len(nums)` (no more choices *left* to add) — but notice, **every node gets recorded**, not just leaves
+
+Tree:
+```
+[]                                          ← recorded
+├─ [1]                                      ← recorded
+│  ├─ [1,2]                                 ← recorded
+│  │  └─ [1,2,3]                            ← recorded (leaf, start=3)
+│  └─ [1,3]                                 ← recorded (leaf, start=3)
+├─ [2]                                      ← recorded
+│  └─ [2,3]                                 ← recorded (leaf, start=3)
+└─ [3]                                      ← recorded (leaf, start=3)
+```
+
+Compare this to Generate Parentheses: there, only **leaves** (length == 2n) get recorded. Here, **every single node** gets recorded. That difference comes entirely from *where* you put the "record" line relative to the base-case check — and it's visible immediately in the tree shape (parentheses tree only marks ✓ at the bottom; subsets tree marks ✓ at every node).
+
+## The takeaway rule
+
+> **The recursion tree is not something you creatively draw — it's a transcription.** Node = state at a call. Edge = one valid choice being made. Leaf = base case. Draw left-to-right in loop order. If you can answer the 3 checklist questions for a problem, you can draw its tree without running the code at all — and conversely, once you can draw the tree, writing the code is just transcribing it back.
+
+Want to pick a problem (Permutations, Combination Sum, N-Queens) and try drawing the tree yourself first, then I'll check it against the real one?
+
+Let's build you a repeatable **playbook** you can apply to almost any backtracking problem on LeetCode. The key insight: nearly all of them are variations of the same skeleton, differing only in **what changes for each problem**.
+
+## The Universal 3-Question Framework (recap + how to use it)
+
+For any backtracking problem, answer these **before** writing code or drawing a tree:
+
+| Question | What it determines |
+|---|---|
+| **1. What's in `path`/`current`?** | Node labels in the tree |
+| **2. What are the legal next choices from a given state?** | Branching factor (how many children) |
+| **3. When is a path "done"?** | Leaf condition (depth of tree) |
+
+Once you answer these three, both the **code** and the **tree** write themselves.
+
+---
+
+## The Big Families of Backtracking Problems
+
+Almost every LeetCode backtracking question falls into one of these patterns:
+
+### Pattern A: Subsets (include/exclude each element once)
+**Example:** [78. Subsets](https://leetcode.com/problems/subsets/)
+- **Choices:** for each element, either include it or skip it (or: pick from `nums[start:]`)
+- **Leaf:** `start == len(nums)` — but **every node** is a valid answer, not just leaves
+- **No duplicates rule:** always move `start` forward, never look backward
+
+```python
+def backtrack(start, path):
+    result.append(path[:])
+    for i in range(start, len(nums)):
+        path.append(nums[i])
+        backtrack(i + 1, path)
+        path.pop()
+```
+
+Tree for `[1,2,3]` (every node ✓):
+```
+[]
+├─ [1]
+│  ├─ [1,2]
+│  │  └─ [1,2,3]
+│  └─ [1,3]
+├─ [2]
+│  └─ [2,3]
+└─ [3]
+```
+
+### Pattern B: Permutations (use every element, order matters)
+**Example:** [46. Permutations](https://leetcode.com/problems/permutations/)
+- **Choices:** any unused element (order matters, so no `start` index — you scan the whole list each time)
+- **Leaf:** `len(path) == len(nums)`
+- **Key difference from Subsets:** need a `used[]` tracker since you can pick *any* remaining element, not just ones after `start`
+
+```python
+def backtrack(path, used):
+    if len(path) == len(nums):
+        result.append(path[:])
+        return
+    for i in range(len(nums)):
+        if used[i]:
+            continue
+        used[i] = True
+        path.append(nums[i])
+        backtrack(path, used)
+        path.pop()
+        used[i] = False
+```
+
+Tree for `[1,2,3]` (only leaves ✓, 3 branches at every level):
+```
+[]
+├─ [1]
+│  ├─ [1,2]
+│  │  └─ [1,2,3] ✓
+│  └─ [1,3]
+│     └─ [1,3,2] ✓
+├─ [2]
+│  ├─ [2,1]
+│  │  └─ [2,1,3] ✓
+│  └─ [2,3]
+│     └─ [2,3,1] ✓
+└─ [3]
+   ├─ [3,1]
+   │  └─ [3,1,2] ✓
+   └─ [3,2]
+      └─ [3,2,1] ✓
+```
+
+### Pattern C: Combinations (choose k of n, order doesn't matter)
+**Example:** [77. Combinations](https://leetcode.com/problems/combinations/)
+- Same as Subsets, but leaf = `len(path) == k` (stop early instead of exhausting all elements)
+- **Pruning trick:** if remaining elements < what's still needed, stop early (big speedup)
+
+### Pattern D: Combination Sum (reuse elements allowed, target sum)
+**Example:** [39. Combination Sum](https://leetcode.com/problems/combination-sum/)
+- **Choices:** `nums[start:]`, but recurse with `backtrack(i, ...)` — **not** `i+1` — because you can reuse the same number
+- **Leaf:** `remaining == 0` (success) or `remaining < 0` (dead end, prune)
+
+```python
+def backtrack(start, path, remaining):
+    if remaining == 0:
+        result.append(path[:])
+        return
+    if remaining < 0:
+        return
+    for i in range(start, len(candidates)):
+        path.append(candidates[i])
+        backtrack(i, path, remaining - candidates[i])   # i, not i+1 → reuse allowed
+        path.pop()
+```
+
+### Pattern E: Grid/Board search (2D, explore neighbors)
+**Example:** [79. Word Search](https://leetcode.com/problems/word-search/), [51. N-Queens](https://leetcode.com/problems/n-queens/)
+- **Choices:** valid neighboring cells (up/down/left/right) or valid next row/column
+- **Leaf:** matched the whole word / placed all N queens
+- **Extra twist:** you must **mark cells as visited** (mutate the board) and **un-mark on backtrack** — same choose/un-choose idea, just applied to a grid instead of a list
+
+```python
+def backtrack(r, c, index):
+    if index == len(word):
+        return True
+    if out_of_bounds or board[r][c] != word[index] or visited[r][c]:
+        return False
+    
+    visited[r][c] = True                       # choose
+    found = any(backtrack(nr, nc, index+1) for nr, nc in neighbors(r, c))
+    visited[r][c] = False                       # un-choose
+    return found
+```
+
+### Pattern F: Partitioning (split a string/array into valid pieces)
+**Example:** [131. Palindrome Partitioning](https://leetcode.com/problems/palindrome-partitioning/)
+- **Choices:** every possible "next cut point" from your current position
+- **Validity filter:** the substring you just cut must satisfy some property (e.g., be a palindrome)
+- **Leaf:** you've consumed the entire string
+
+```python
+def backtrack(start, path):
+    if start == len(s):
+        result.append(path[:])
+        return
+    for end in range(start + 1, len(s) + 1):
+        piece = s[start:end]
+        if not is_palindrome(piece):
+            continue                    # skip invalid choice
+        path.append(piece)
+        backtrack(end, path)
+        path.pop()
+```
+
+---
+
+## How to Approach *Any* New Problem You Haven't Seen
+
+1. **Identify the family** — does it smell like Subsets (pick/skip), Permutations (order matters, use all), Combinations (pick k), Combination Sum (reuse allowed), Grid search, or Partitioning?
+2. **Answer the 3 questions** (path contents / legal choices / leaf condition) for *this specific problem*.
+3. **Write the skeleton first**, leaving `get_options`, `is_valid`, and `is_solution` as comments — fill them in one at a time.
+4. **Draw the tree for the smallest non-trivial input** (n=2 or n=3) by hand *before* trusting your code — if the tree looks wrong, your `is_valid`/leaf logic is wrong.
+5. **Add pruning after correctness** — once it works, look for `if` conditions that let you `return` or `continue` *earlier* (e.g., remaining sum < 0, remaining slots > remaining elements) to cut the tree down.
+
+---
+
+Since this is the kind of thing you'll want to come back to while grinding more problems, want me to turn this into a saved reference doc (with a few more solved examples like N-Queens and Combination Sum II worked out fully with trees)?
+
+Good example — this is **[79. Word Search](https://leetcode.com/problems/word-search/)** (Pattern E: Grid search), and this particular grid+word combo has a really instructive twist. Let me walk through it properly.
+
+## Step 1: Apply the 3 questions
+
+| Question | Answer |
+|---|---|
+| **What's in `path`?** | The sequence of grid cells (coordinates) visited so far, must spell a prefix of the word |
+| **What are legal choices?** | Up/down/left/right neighbor of current cell, if **not yet visited** and its letter **matches the next required character** |
+| **When is it "done"?** | Matched all 15 characters → success. Or: no valid neighbor for next required char → dead end, backtrack |
+
+## Step 2: Map the grid to coordinates
+
+```
+      col:  0    1    2    3    4    5
+row 0:      A    A    A    A    A    A
+row 1:      A    A    A    A    A    A
+row 2:      A    A    A    A    A    A
+row 3:      A    A    A    A    A    A
+row 4:      A    A    A    A    A    B   ← B at (4,5)
+row 5:      A    A    A    A    B    A   ← B at (5,4)
+```
+
+Word: `"AAAAAAAAAAAAABB"` → **13 A's, then B, then B** (indices 0–12 are `A`, index 13 is `B`, index 14 is `B`).
+
+## Step 3: Spot the critical constraint *before* drawing anything
+
+For the search to succeed, at some point the path needs **two orthogonally-adjacent cells that are both `B`** (for the last two letters). Check the only two `B` cells:
+
+- `(4,5)` and `(5,4)` → difference is `(+1, -1)` — that's **diagonal**, not up/down/left/right.
+
+**They are not orthogonal neighbors.** So no matter which of the 34 `A` cells you start from, or which of the enormous number of 13-step "snake paths" through the A's you take — **the last step (B→B) can never succeed.**
+
+This tells us the answer is `False` *before* tracing a single branch — but let's see what the recursion tree looks like anyway, since it's a great example of **exhaustive failure**.
+
+## Step 4: The recursion tree (structure)
+
+**Top level:** try every cell matching `word[0] = 'A'` as a start (34 separate root calls — practically every cell except the two `B`s).
+
+Zooming into *one* representative start, say `(3,4)`:
+
+```
+(3,4)='A' [len=1]
+├─ (2,4)='A' [len=2]
+│    ├─ (1,4) ...   (continues branching, ~3 unvisited neighbors each step)
+│    ├─ (2,3) ...
+│    └─ (2,5) ...
+├─ (3,3)='A' [len=2]
+│    └─ ... (same explosive branching)
+├─ (3,5)='A' [len=2]
+│    └─ ... 
+└─ (4,4)='A' [len=2]
+     └─ ... 
+```
+
+This keeps branching (up to 3 new directions each step, since you can't go back the way you came) for **13 levels** — a huge but finite tree, shaped like thousands of self-avoiding random walks across the grid.
+
+## Step 5: The critical node — where *every* branch dies
+
+Follow **any** branch that happens to walk onto a `B` cell as its 13th A-consuming step... wait, actually as its **14th cell** (matching `word[13]='B'`). Say a path reaches:
+
+```
+... → (4,4)='A' [len=13]
+        └─ (4,5)='B' [len=14]   ✓ matches word[13]='B'
+              ├─ (3,5)='A' ✗ doesn't match word[14]='B' → dead end, backtrack
+              ├─ (5,5)='A' ✗ doesn't match word[14]='B' → dead end, backtrack
+              └─ (4,4) already visited → skip
+            → NO valid children. Backtrack all the way up.
+```
+
+Same thing happens for the *other* `B`:
+
+```
+... → (5,3)='A' [len=13]
+        └─ (5,4)='B' [len=14]   ✓ matches word[13]='B'
+              ├─ (4,4)='A' ✗ doesn't match word[14]='B' → dead end
+              ├─ (5,3) already visited → skip
+              └─ (5,5)='A' ✗ doesn't match word[14]='B' → dead end
+            → NO valid children. Backtrack all the way up.
+```
+
+**Every single branch in the entire tree that survives 13 levels and reaches a `B` hits this exact same wall** — none of `(4,5)`'s or `(5,4)`'s neighbors is the *other* `B`. There is no escape anywhere in the tree.
+
+## Step 6: What this means for the whole tree
+
+```
+ROOT (try all 34 'A' starts)
+ ├─ start (0,0) → explores huge subtree → every leaf-attempt fails at "need 2nd B" → 🗙 all backtrack
+ ├─ start (0,1) → same story → 🗙
+ ├─ ...
+ ├─ start (4,4) → gets closest to a B → still 🗙 (no B-B orthogonal pair exists)
+ ├─ ...
+ └─ start (5,5) → 🗙
+ 
+ No branch anywhere ever reaches len==15.
+ → function returns False after exploring the ENTIRE reachable search space.
+```
+
+## The takeaway
+
+This is the "worst case" shape for backtracking: **massive branching, full exploration, zero success** — every path backtracks all the way to the root because of one structural fact (the two `B`s aren't orthogonally adjacent) that a human can spot instantly but the algorithm has to discover empirically, path by path.
+
+**Answer: `False`.**
+
+This is actually a good habit to build: **before coding/tracing**, check if there's a quick structural reason the answer is trivially yes/no (like "does the word even *contain* consecutive required-adjacent characters that exist in the grid?") — it won't always save you, but here it explains *why* the recursion tree, however huge, has zero surviving leaves.
+
+# 131. Palindrome Partitioning
+
+**Problem:** Given a string `s`, partition it so that every substring of the partition is a palindrome. Return all possible partitions.
+
+## Step 1: Apply the 3-question framework
+
+| Question | Answer |
+|---|---|
+| **What's in `path`?** | The list of pieces cut so far, e.g. `["a", "a"]` |
+| **What are legal choices?** | Any cut point `end` from `start+1` to `len(s)`, **but only if** `s[start:end]` is a palindrome |
+| **When is it "done"?** | `start == len(s)` — the whole string has been consumed by valid pieces |
+
+This is **Pattern F (Partitioning)**: unlike Subsets/Permutations where you pick from a fixed list, here your "choices" are **substrings of varying length**, filtered by a validity check (`is_palindrome`).
+
+## Step 2: Code
+
+```python
+def partition(s: str) -> list[list[str]]:
+    result = []
+
+    def is_palindrome(sub: str) -> bool:
+        return sub == sub[::-1]
+
+    def backtrack(start: int, path: list[str]) -> None:
+        if start == len(s):                    # base case: consumed whole string
+            result.append(path[:])
+            return
+
+        for end in range(start + 1, len(s) + 1):   # try every possible next cut
+            piece = s[start:end]
+            if not is_palindrome(piece):
+                continue                         # illegal choice — skip, don't recurse
+            path.append(piece)                    # choose
+            backtrack(end, path)                  # explore
+            path.pop()                            # un-choose
+
+    backtrack(0, [])
+    return result
+```
+
+## Step 3: Trace `s = "aab"` by hand
+
+At each node, label = `(start index, path so far)`. I'll mark which substrings from `start` are tried, and cross out (✗) the ones that fail `is_palindrome`.
+
+```
+start=0, path=[]
+ candidates from index 0: "a"(0:1)✓  "aa"(0:2)✓  "aab"(0:3)✗(not palindrome)
+
+├─ piece="a"   → path=["a"]
+│    start=1, path=["a"]
+│    candidates from index 1: "a"(1:2)✓  "ab"(1:3)✗
+│    └─ piece="a"   → path=["a","a"]
+│         start=2, path=["a","a"]
+│         candidates from index 2: "b"(2:3)✓
+│         └─ piece="b"   → path=["a","a","b"]
+│              start=3, path=["a","a","b"]
+│              start==len(s)=3 → ✓ RECORD ["a","a","b"]
+│              return, pop() → path=["a","a"]
+│         return, pop() → path=["a"]
+│    return, pop() → path=[]
+
+└─ piece="aa"  → path=["aa"]
+     start=2, path=["aa"]
+     candidates from index 2: "b"(2:3)✓
+     └─ piece="b"   → path=["aa","b"]
+          start=3, path=["aa","b"]
+          start==len(s)=3 → ✓ RECORD ["aa","b"]
+          return, pop() → path=["aa"]
+     return, pop() → path=[]
+```
+
+## Step 4: The recursion tree, drawn cleanly
+
+```
+(0, [])
+├─ "a" ✓ ──> (1, ["a"])
+│              ├─ "a" ✓ ──> (2, ["a","a"])
+│              │              └─ "b" ✓ ──> (3, ["a","a","b"])  ✓ LEAF → RESULT 1
+│              └─ "ab" ✗ (skipped, no branch drawn)
+│
+└─ "aa" ✓ ──> (2, ["aa"])
+│              └─ "b" ✓ ──> (3, ["aa","b"])  ✓ LEAF → RESULT 2
+│
+(and "aab" ✗ at the root — skipped entirely, no branch)
+```
+
+**Final result:**
+```python
+[["a", "a", "b"], ["aa", "b"]]
+```
+
+This matches the two ways to slice `"aab"` into all-palindrome pieces.
+
+## What's different about this tree vs. earlier ones
+
+1. **Branching factor is variable and driven by a filter**, not a fixed choice list. At `start=0` there are 3 *possible* cut lengths, but only 2 pass `is_palindrome` — so only 2 branches are drawn. The ✗ ones **never get a node** — they're rejected in the `if not is_palindrome: continue` line before any recursive call happens, so they cost you a loop iteration but not a subtree.
+2. **Depth is not fixed.** Compare to Generate Parentheses (always depth 2n) or Permutations (always depth n). Here, depth = however many pieces the partition happens to need — the tree is **ragged**, with leaves at different depths in general (though in this small example both leaves land at depth 3 by coincidence).
+3. **Leaf condition depends on position, not path length** — `start == len(s)`, not `len(path) == k`. This is a common variant: your "am I done" check is about *how much of the input you've consumed*, not how many choices you've made.
+
+Want to try `s = "aabb"` yourself and sketch the tree, then I'll check it against the real trace?
+
+Good question — let's break down exactly what these two parameters mean and why they exist, using the 3-question framework from before.
+
+## `start: int` — "where am I in the string right now"
+
+`start` is the **index of the string `s` that hasn't been cut yet**. It marks the boundary: everything *before* `start` has already been chopped into pieces and stored in `path`; everything from `start` onward is **still unprocessed**.
+
+Think of it as a **cursor** sliding along the string.
+
+```
+s = "aab"
+      ^
+   start=0   → nothing cut yet, cursor at the very beginning
+```
+
+After we choose the piece `"a"` (indices 0:1) and recurse:
+
+```
+s = "aab"
+       ^
+   start=1   → "a" has been cut off and stored; cursor now sits right after it
+```
+
+After choosing `"aa"` (indices 0:2) instead, in a different branch:
+
+```
+s = "aab"
+        ^
+   start=2   → "aa" has been cut off; cursor sits right after it
+```
+
+**Why we need it:** at every recursive call, we need to know *where to start slicing the next piece from*. Without `start`, we'd have no way to know "have I already consumed the first two letters, or not?" It answers question 1 from the framework — **it's the state needed to know your legal next choices** (`for end in range(start+1, len(s)+1)`).
+
+## `path: list[str]` — "the pieces I've committed to so far"
+
+`path` is simply the **list of substrings already chosen** on this branch — the partition-in-progress.
+
+```
+path = []                  → nothing chosen yet
+path = ["a"]                → chose "a" as the first piece
+path = ["a", "a"]           → chose "a" then "a"
+path = ["a", "a", "b"]      → chose "a", "a", "b" — and now start==len(s), so this is a complete, valid partition
+```
+
+**Why we need it:** this is literally the answer we're building. When we hit the base case (`start == len(s)`), we copy `path` into `result` — that copy **is** one of the final answers. It answers question 1 differently: it's the state needed to **construct the output**, not to make decisions.
+
+## How they move together
+
+Every time we make a choice, **both variables update in lockstep**, because a "choice" here means "cut a piece from `start` to some `end`":
+
+| Action | `start` | `path` |
+|---|---|---|
+| Before any choice | `0` | `[]` |
+| Choose piece `s[0:1] = "a"` | becomes `1` (in the recursive call) | becomes `["a"]` |
+| Choose piece `s[1:2] = "a"` | becomes `2` | becomes `["a", "a"]` |
+| Choose piece `s[2:3] = "b"` | becomes `3` | becomes `["a", "a", "b"]` |
+| Now `start == len(s) == 3` | — | this `path` gets recorded |
+
+So `start` tells you **how far along the string you are**, and `path` tells you **what you cut to get there**. They're two views of the exact same progress — one measured in string-position, the other in actual-pieces-chosen.
+
+## A visual with the cursor and the pieces side by side
+
+```
+s =  a  a  b
+     0  1  2  3   ← these numbers are what "start" can be
+
+start=0, path=[]                    →  |aab      (cursor before everything)
+  choose "a" (s[0:1])
+start=1, path=["a"]                 →  a|ab      (cursor after "a")
+  choose "a" (s[1:2])
+start=2, path=["a","a"]             →  aa|b      (cursor after "aa")
+  choose "b" (s[2:3])
+start=3, path=["a","a","b"]         →  aab|      (cursor at the very end → DONE)
+```
+
+The `|` is the cursor (`start`), and reading the pieces to the left of it at each step gives you `path`.
+
+## One-line summary
+
+> **`start`** = "index up to which the string is already sliced" (drives *what choices are legal*).
+> **`path`** = "the actual slices chosen so far" (drives *what gets recorded as the answer*).
+
+They always stay in sync: `start` is really just `sum(len(piece) for piece in path)` — you could technically compute one from the other, but passing both makes the code clearer and avoids recomputing the sum every call.

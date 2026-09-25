@@ -7,7 +7,15 @@ name = "convert_sorted_array_to_binary_search_tree_108"
 version = "0.1.0"
 
 [[package]]
+name = "generate_parantheses"
+version = "0.1.0"
+
+[[package]]
 name = "longest_repeating_character_replacement"
+version = "0.1.0"
+
+[[package]]
+name = "max_consecutive_ones_iii_1004"
 version = "0.1.0"
 
 [[package]]
