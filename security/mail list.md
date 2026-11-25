@@ -66,3 +66,77 @@ Most offer email subscriptions or RSS feeds on their security advisory pages.
 - A "watch" on GitHub Security Advisories for your dependencies gives targeted alerts.
 
 If you tell me what you run (cloud, enterprise software, specific vendors, development stacks), I can narrow this to a short list.
+
+Thunderbird handles this in three ways, depending on what each source offers.
+
+**1. Email mailing lists**
+
+Subscribing happens outside Thunderbird. You sign up with your email address, and the messages arrive in your inbox.
+
+- **Web form (Mailman lists):** Open the list's info page, enter your address, and confirm. Examples are Full Disclosure (nmap.org/mailman/listinfo/fulldisclosure) and Ubuntu (ubuntu-security-announce on lists.ubuntu.com).
+- **Email-based:** oss-security lists subscription instructions on openwall.com/lists, and Debian has a form at lists.debian.org. Kernel lists (vger.kernel.org) use their own subscription instructions on their info page.
+- **Confirmation:** Most lists send a confirmation email. Reply to it or click its link, or you won't be subscribed.
+
+**2. RSS/Atom feeds, built into Thunderbird**
+
+This suits CISA, CERT-In, SANS ISC, vendor advisories, news sites, and GitHub advisories.
+
+1. Open **Account Settings** (the menu at the top right, or right-click your account).
+2. Click **Account Actions → Add Feed Account**.
+3. Select the new **Feeds** account and click **Manage Subscriptions**.
+4. Paste the feed URL, click **Add**, then **OK**.
+
+To find a feed URL, look for the RSS icon or an "RSS/Subscribe" link on the advisory page. Thunderbird updates feeds automatically, and each feed appears as a folder, so you get a separate reading area from your mail.
+
+**3. Newsgroup access to kernel lists**
+
+For Linux kernel lists you can skip subscribing. lore.kernel.org offers NNTP access, which Thunderbird supports:
+
+1. **Account Actions → Add Other Account → Newsgroup Account**.
+2. Use `nntp.lore.kernel.org` as the server.
+3. Right-click the account, choose **Subscribe**, and tick the lists you want (for example `org.kernel.vger.netdev`).
+
+This keeps the high-volume lists out of your inbox.
+
+**Keeping it manageable**
+
+- Right-click a message and choose **Create Filter from Message** to auto-sort each list into its own folder.
+- Use a separate email address or alias for list subscriptions, since some lists are noisy.
+- Mark high-volume lists as read automatically with a filter, and only check them when needed.
+
+If you tell me which sources you want first, I can give the exact subscription addresses and feed URLs for those.
+
+Gmail doesn't have built-in RSS, so the approach splits: mailing lists work the same way, and feeds need a workaround.
+
+**1. Email mailing lists**
+
+Subscribe exactly as before (web form or confirmation email) using your Gmail address. The only Gmail-specific work is organizing the incoming mail:
+
+1. Open one of the list emails.
+2. Click the three-dot menu → **Filter messages like these**.
+3. Match on the **To** or **List-Id** header (for example, put the list address in the "To" or "Has the words" field, such as `list:oss-security.lists.openwall.com`).
+4. Click **Create filter**, then choose **Apply the label** (create a new one like "Security/oss-security"), and optionally **Skip the Inbox** and **Never send it to Spam**.
+
+Check the **Spam** folder after subscribing, since confirmation emails sometimes land there.
+
+**2. RSS/Atom feeds (CISA, CERT-In, SANS, vendors, GitHub)**
+
+Gmail can't read feeds directly, so use a feed-to-email service:
+
+- **Blogtrottr** (blogtrottr.com): paste a feed URL, give your email, and choose instant or digest delivery. Easiest option.
+- **Feedrabbit** or **Follow.it**: similar services, with digest options.
+- **IFTTT or Zapier**: more flexible; you can trigger an email per new feed item, but free tiers are limited.
+
+Alternatively, use a dedicated feed reader (Feedly, Inoreader, NetNewsWire) and skip email for those sources. Many people prefer this because feeds can be high-volume.
+
+**3. Newsletters (Krebs, tl;dr sec, Risky Business)**
+
+Just subscribe with your Gmail address on their sites; they arrive as regular email.
+
+**Keeping Gmail manageable**
+
+- Use a label per source and filter them out of the Inbox, then check the labels on a schedule.
+- Use a **plus alias** like `yourname+security@gmail.com` when subscribing. Gmail delivers it to your inbox, and you can filter on the "To" address easily.
+- Kernel lists are very high volume, so for those read lore.kernel.org directly or use Thunderbird's NNTP access rather than flooding Gmail.
+
+If you'd like, I can give you the exact subscription links and feed URLs for a starter set (oss-security, CISA, CERT-In, Microsoft, and so on).
